@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export default function Modal({
@@ -28,17 +29,17 @@ export default function Modal({
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity z-[9999]"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity z-[99999]"
         onClick={onClose}
       />
 
       {/* Modal Dialog */}
       <div
-        className={`relative w-full ${maxWidth} rounded-2xl bg-slate-900 border border-slate-750 shadow-2xl shadow-black z-[10000] my-auto overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-150`}
+        className={`relative w-full ${maxWidth} rounded-2xl bg-slate-900 border border-slate-750 shadow-2xl shadow-black z-[100000] my-auto overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-150`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -68,5 +69,11 @@ export default function Modal({
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body)
+  }
+
+  return modalContent
 }
 
