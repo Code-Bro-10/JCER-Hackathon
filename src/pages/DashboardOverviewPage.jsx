@@ -19,6 +19,7 @@ import AdaptiveSignalControl from '../components/dashboard/AdaptiveSignalControl
 import RecentIncidentsWidget from '../components/dashboard/RecentIncidentsWidget'
 import SectorCongestionChart from '../components/dashboard/SectorCongestionChart'
 import MLIntelligenceWidget from '../components/dashboard/MLIntelligenceWidget'
+import QuickRouteBanner from '../components/dashboard/QuickRouteBanner'
 import Button from '../components/common/Button'
 import { CCTV_FEEDS } from '../services/mockData'
 
@@ -130,6 +131,9 @@ export default function DashboardOverviewPage() {
 
       {/* Machine Learning Telemetry & Inference Widget */}
       <MLIntelligenceWidget />
+
+      {/* Quick Source & Destination Route Finder with School Rush AI */}
+      <QuickRouteBanner />
 
       {/* Main Interactive Digital Twin Map (Full Width) */}
       <InteractiveCityMap />

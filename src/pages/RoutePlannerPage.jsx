@@ -35,41 +35,58 @@ import {
 import { BELAGAVI_NODES, BENGALURU_NODES, DEFAULT_MAP_CENTER } from '../services/roadNetworkData'
 
 export default function RoutePlannerPage() {
-  const { addToast } = useTraffic()
+  const { addToast, routeSearchParams, setRouteSearchParams } = useTraffic()
 
-  const [origin, setOrigin] = useState('Rani Chennamma Circle, Belagavi')
-  const [destination, setDestination] = useState('Jain College of Engineering (JCER), Belagavi')
-  const [originCoord, setOriginCoord] = useState([15.8596, 74.5098])
-  const [destCoord, setDestCoord] = useState([15.8340, 74.5360])
+  const [origin, setOrigin] = useState(routeSearchParams?.origin || 'Rani Chennamma Circle, Belagavi')
+  const [destination, setDestination] = useState(routeSearchParams?.destination || 'Jain College of Engineering (JCER), Belagavi')
+  const [originCoord, setOriginCoord] = useState(routeSearchParams?.originCoord || [15.8596, 74.5098])
+  const [destCoord, setDestCoord] = useState(routeSearchParams?.destCoord || [15.8340, 74.5360])
   const [vehicleType, setVehicleType] = useState('passenger')
   const [isCalculating, setIsCalculating] = useState(false)
   const [routePlan, setRoutePlan] = useState(null)
   const [selectedRouteId, setSelectedRouteId] = useState('route-ai-smart')
 
   // AI Advisor State (Option 2: Ask AI)
-  const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false)
+  const [aiAdvisorOpen, setAiAdvisorOpen] = useState(Boolean(routeSearchParams?.autoAskAI))
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null)
+
+  // Robust Coordinate Resolver: checks GPS string, cache, and geocodes any typed address
+  const resolveCoordinates = async (queryText, currentCoord, fallbackCoord) => {
+    // If coordinate is explicitly chosen and query matches GPS / Map Pin
+    if (
+      currentCoord &&
+      Array.isArray(currentCoord) &&
+      currentCoord.length === 2 &&
+      (queryText?.startsWith('My Live GPS') || queryText?.startsWith('Map Pin'))
+    ) {
+      return currentCoord
+    }
+
+    // If query text is provided, geocode it to ensure we route to what user actually typed!
+    if (queryText && typeof queryText === 'string' && queryText.trim().length > 0) {
+      try {
+        const found = await searchNominatimLocations(queryText.trim())
+        if (found && found.length > 0) {
+          return [found[0].lat, found[0].lon]
+        }
+      } catch (err) {
+        console.warn('Geocoding error:', err)
+      }
+    }
+
+    return currentCoord || fallbackCoord
+  }
 
   // Calculate routes using OSRM with local fallback
   const handleCalculateRoutes = useCallback(async () => {
     try {
       setIsCalculating(true)
 
-      // Resolve coordinates if user entered a custom name
-      let startPoint = originCoord
-      let endPoint = destCoord
+      const startPoint = await resolveCoordinates(origin, originCoord, [15.8596, 74.5098])
+      const endPoint = await resolveCoordinates(destination, destCoord, [15.8340, 74.5360])
 
-      if (!startPoint || startPoint.length !== 2) {
-        const found = await searchNominatimLocations(origin)
-        if (found.length > 0) startPoint = [found[0].lat, found[0].lon]
-        else startPoint = [15.8596, 74.5098]
-      }
-
-      if (!endPoint || endPoint.length !== 2) {
-        const found = await searchNominatimLocations(destination)
-        if (found.length > 0) endPoint = [found[0].lat, found[0].lon]
-        else endPoint = [15.8340, 74.5360]
-      }
+      setOriginCoord(startPoint)
+      setDestCoord(endPoint)
 
       const res = await fetchOSRMRoutes(startPoint, endPoint, { vehicleType })
       if (res && res.success) {
@@ -92,20 +109,12 @@ export default function RoutePlannerPage() {
   const handleAskAI = useCallback(async () => {
     try {
       setIsCalculating(true)
-      let startPoint = originCoord
-      let endPoint = destCoord
 
-      if (!startPoint || startPoint.length !== 2) {
-        const found = await searchNominatimLocations(origin)
-        if (found.length > 0) startPoint = [found[0].lat, found[0].lon]
-        else startPoint = [15.8596, 74.5098]
-      }
+      const startPoint = await resolveCoordinates(origin, originCoord, [15.8596, 74.5098])
+      const endPoint = await resolveCoordinates(destination, destCoord, [15.8340, 74.5360])
 
-      if (!endPoint || endPoint.length !== 2) {
-        const found = await searchNominatimLocations(destination)
-        if (found.length > 0) endPoint = [found[0].lat, found[0].lon]
-        else endPoint = [15.8340, 74.5360]
-      }
+      setOriginCoord(startPoint)
+      setDestCoord(endPoint)
 
       const res = await fetchOSRMRoutes(startPoint, endPoint, { vehicleType })
       if (res && res.success) {
@@ -154,8 +163,12 @@ export default function RoutePlannerPage() {
   }, [origin, destination, originCoord, destCoord, vehicleType, addToast])
 
   useEffect(() => {
-    handleCalculateRoutes()
-  }, [])
+    if (routeSearchParams?.autoAskAI) {
+      handleAskAI()
+    } else {
+      handleCalculateRoutes()
+    }
+  }, [routeSearchParams?.autoAskAI])
 
   const selectedRoute =
     routePlan?.routes?.find((r) => r.id === selectedRouteId) || routePlan?.routes?.[0]

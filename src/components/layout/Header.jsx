@@ -17,6 +17,7 @@ import {
   User,
   LogOut,
   KeyRound,
+  Route,
 } from 'lucide-react'
 import { useTraffic } from '../../context/TrafficContext'
 import { useAuth, DEMO_PERSONAS } from '../../context/AuthContext'
@@ -33,6 +34,7 @@ export default function Header({ onMobileMenuToggle }) {
     setNotifications,
     incidents,
     setCurrentPage,
+    setRouteSearchParams,
   } = useTraffic()
 
   const { user, isAuthenticated, logout, quickLogin, activePeers } = useAuth()
@@ -71,8 +73,14 @@ export default function Header({ onMobileMenuToggle }) {
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     if (!searchQuery.trim()) return
-    // navigate to incident or route depending on query
-    setCurrentPage('incidents')
+    // Route search or incident search
+    setRouteSearchParams((prev) => ({
+      ...prev,
+      destination: searchQuery.trim(),
+      destCoord: null, // trigger fresh geocode
+      autoCalculate: true,
+    }))
+    setCurrentPage('route')
   }
 
   return (
@@ -112,18 +120,28 @@ export default function Header({ onMobileMenuToggle }) {
         )}
       </div>
 
-      {/* Center section: Search bar */}
-      <div className="hidden md:flex flex-1 max-w-md mx-4">
-        <form onSubmit={handleSearchSubmit} className="relative w-full">
+      {/* Center section: Search bar & Quick Route Planner Button */}
+      <div className="hidden md:flex flex-1 max-w-lg mx-4 items-center gap-2">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search intersections, incidents, corridors..."
+            placeholder="Search destination, college, or area (e.g. JCER College)..."
             className="w-full rounded-xl border border-slate-800 bg-slate-900/90 pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-sans"
           />
         </form>
+
+        <button
+          type="button"
+          onClick={() => setCurrentPage('route')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-bold transition-all cursor-pointer shadow-sm flex-shrink-0"
+          title="Open Route Planner with Source & Destination"
+        >
+          <Route className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Plan Route</span>
+        </button>
       </div>
 
       {/* Right section: Sector Picker, Live Clock, Mute, Notifications */}

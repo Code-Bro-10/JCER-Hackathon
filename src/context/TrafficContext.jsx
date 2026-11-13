@@ -24,6 +24,16 @@ export function TrafficProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
   const [liveSimulationTick, setLiveSimulationTick] = useState(0)
 
+  // Global Route Search Parameters across Dashboard & Route Planner
+  const [routeSearchParams, setRouteSearchParams] = useState({
+    origin: 'Rani Chennamma Circle, Belagavi',
+    destination: 'Jain College of Engineering (JCER), Belagavi',
+    originCoord: [15.8596, 74.5098],
+    destCoord: [15.8340, 74.5360],
+    autoCalculate: false,
+    autoAskAI: false,
+  })
+
   // Toast notification manager
   const addToast = useCallback((toast) => {
     const id = Date.now() + Math.random()
@@ -259,6 +269,8 @@ export function TrafficProvider({ children }) {
         isLoading,
         refreshData: loadGlobalData,
         liveSimulationTick,
+        routeSearchParams,
+        setRouteSearchParams,
       }}
     >
       {children}
