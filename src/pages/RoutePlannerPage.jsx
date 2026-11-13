@@ -142,6 +142,7 @@ export default function RoutePlannerPage() {
             route={selectedRoute}
             origin={origin}
             destination={destination}
+            onSelectRoute={setSelectedRouteId}
           />
         </div>
       </div>

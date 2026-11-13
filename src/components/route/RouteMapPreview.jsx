@@ -1,155 +1,125 @@
-import React from 'react'
-import { MapPin, Navigation, Compass, AlertTriangle, ShieldCheck } from 'lucide-react'
+import React, { useMemo } from 'react'
+import { TrafficMapContainer, RoutePolylinesLayer, RoadNetworkDigitalTwinLayer } from '../map'
+import {
+  calculateMultiModalRoutes,
+  DEFAULT_MAP_CENTER,
+  DEMO_NODES,
+  getNodeLatLng,
+} from '../../services/roadNetworkData'
 
-export default function RouteMapPreview({ route, origin, destination }) {
-  if (!route) return null
+/**
+ * Interactive Route Map Preview for Route Planner Page
+ *
+ * Powered by React, Leaflet, React-Leaflet, and OpenStreetMap.
+ * Renders multi-modal route polylines with distinct color themes:
+ * - AI Smart Dynamic Route: Glowing Cyan (#06b6d4)
+ * - Shortest Route: Red/Rose (#f43f5e)
+ * - Eco-Green Corridor: Emerald (#10b981)
+ *
+ * @param {object} props
+ * @param {object} props.route - Currently selected route
+ * @param {string} props.origin - Origin location string
+ * @param {string} props.destination - Destination location string
+ * @param {function} [props.onSelectRoute] - Callback when an alternative route is clicked on the map
+ */
+export default function RouteMapPreview({
+  route,
+  origin,
+  destination,
+  onSelectRoute = () => {},
+}) {
+  // Resolve origin and destination nodes based on string names or fallback to INT-101 and INT-104
+  const startNodeId = useMemo(() => {
+    if (!origin) return 'INT-101'
+    const q = origin.toLowerCase()
+    const match = DEMO_NODES.find((n) => n.name.toLowerCase().includes(q) || n.sector.toLowerCase().includes(q))
+    return match ? match.id : 'INT-101'
+  }, [origin])
 
-  const isAiSmart = route.id === 'route-ai-smart'
-  const isShortest = route.id === 'route-shortest'
+  const endNodeId = useMemo(() => {
+    if (!destination) return 'INT-104'
+    const q = destination.toLowerCase()
+    const match = DEMO_NODES.find((n) => n.name.toLowerCase().includes(q) || n.sector.toLowerCase().includes(q))
+    return match ? match.id : 'INT-104'
+  }, [destination])
+
+  // Calculate high-fidelity multi-modal routes on local graph
+  const routePlan = useMemo(() => {
+    return calculateMultiModalRoutes(startNodeId, endNodeId)
+  }, [startNodeId, endNodeId])
+
+  const originLatLng = getNodeLatLng(startNodeId)
+  const destinationLatLng = getNodeLatLng(endNodeId)
+
+  // Map center between origin and destination
+  const mapCenter = useMemo(() => {
+    if (originLatLng && destinationLatLng) {
+      return [
+        (originLatLng[0] + destinationLatLng[0]) / 2,
+        (originLatLng[1] + destinationLatLng[1]) / 2,
+      ]
+    }
+    return DEFAULT_MAP_CENTER
+  }, [originLatLng, destinationLatLng])
+
+  const selectedRouteId = route?.id || 'route-ai-smart'
 
   return (
-    <div className="relative rounded-2xl bg-slate-950 border border-slate-800 p-5 overflow-hidden shadow-2xl flex flex-col justify-between h-[360px] sm:h-[420px]">
-      {/* Background Matrix Grid */}
-      <div
-        className="absolute inset-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, #06b6d4 1px, transparent 1px), linear-gradient(to bottom, #06b6d4 1px, transparent 1px)',
-          backgroundSize: '30px 30px',
-        }}
-      />
-
-      {/* Top Overlay Badge */}
-      <div className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-            <Compass className="w-4 h-4" />
+    <div className="relative rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+      <TrafficMapContainer
+        center={mapCenter}
+        zoom={14}
+        title="Dynamic Route Navigation Canvas"
+        subtitle={`From: ${origin || 'Origin'} ➔ To: ${destination || 'Destination'}`}
+        showLayerControls={false}
+        height="440px"
+        headerActions={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-cyan-400">
+              {route?.distanceKm || '15.6'} km • {route?.durationMin || '22'}m
+            </span>
           </div>
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Corridor Vector Visualization
-            </h4>
-            <p className="text-[10px] text-slate-400">
-              Active Path: <span className="text-cyan-300 font-semibold">{route.title}</span>
-            </p>
+        }
+      >
+        {/* Subtle background road network grid */}
+        <RoadNetworkDigitalTwinLayer
+          showSignals={false}
+          showEdges={true}
+        />
+
+        {/* Multi-modal Route Polylines Layer */}
+        <RoutePolylinesLayer
+          routes={routePlan.routes}
+          selectedRouteId={selectedRouteId}
+          onSelectRoute={onSelectRoute}
+          originLatLng={originLatLng}
+          destinationLatLng={destinationLatLng}
+          originName={origin || 'Origin Point'}
+          destinationName={destination || 'Destination Point'}
+        />
+      </TrafficMapContainer>
+
+      {/* Route Legend Bar */}
+      <div className="p-3 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 rounded-full bg-cyan-400" />
+            <span className="text-slate-300">AI Smart (Cyan)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 rounded-full bg-rose-400" />
+            <span className="text-slate-300">Shortest (Rose)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 rounded-full bg-emerald-400" />
+            <span className="text-slate-300">Eco-Green (Emerald)</span>
           </div>
         </div>
 
-        <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-cyan-400">
-          {route.distanceKm} km • {route.durationMin}m
-        </div>
-      </div>
-
-      {/* Graphic Route SVG Vector */}
-      <div className="relative z-10 my-auto w-full h-44">
-        <svg className="w-full h-full" viewBox="0 0 600 220" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="routeGradientSmart" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
-              <stop offset="50%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#10b981" />
-            </linearGradient>
-            <linearGradient id="routeGradientShort" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
-              <stop offset="40%" stopColor="#f43f5e" />
-              <stop offset="100%" stopColor="#f43f5e" />
-            </linearGradient>
-            <linearGradient id="routeGradientEco" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#34d399" />
-            </linearGradient>
-          </defs>
-
-          {/* Background grid roads */}
-          <path d="M 50,50 L 550,50" stroke="#1e293b" strokeWidth="4" />
-          <path d="M 50,110 L 550,110" stroke="#1e293b" strokeWidth="8" />
-          <path d="M 50,170 L 550,170" stroke="#1e293b" strokeWidth="4" />
-          <path d="M 120,20 L 120,200" stroke="#1e293b" strokeWidth="6" />
-          <path d="M 300,20 L 300,200" stroke="#1e293b" strokeWidth="8" />
-          <path d="M 480,20 L 480,200" stroke="#1e293b" strokeWidth="6" />
-
-          {/* Active Route Path according to chosen route */}
-          {isAiSmart ? (
-            /* AI Smart curves smoothly away from central jam (around y=50) */
-            <path
-              d="M 60,110 Q 180,40 300,50 T 540,110"
-              fill="none"
-              stroke="url(#routeGradientSmart)"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeDasharray="6 3"
-              className="animate-pulse"
-            />
-          ) : isShortest ? (
-            /* Shortest plunges directly through central Market St collision */
-            <path
-              d="M 60,110 L 540,110"
-              fill="none"
-              stroke="url(#routeGradientShort)"
-              strokeWidth="6"
-              strokeLinecap="round"
-            />
-          ) : (
-            /* Eco takes perimeter highway */
-            <path
-              d="M 60,110 Q 180,180 300,170 T 540,110"
-              fill="none"
-              stroke="url(#routeGradientEco)"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeDasharray="8 4"
-            />
-          )}
-
-          {/* Choke Point Marker at (300, 110) */}
-          <circle cx="300" cy="110" r="14" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-          <circle cx="300" cy="110" r="8" fill="#f43f5e" />
-
-          {/* Origin Pin at (60, 110) */}
-          <circle cx="60" cy="110" r="10" fill="#06b6d4" opacity="0.3" className="animate-ping" />
-          <circle cx="60" cy="110" r="6" fill="#06b6d4" />
-
-          {/* Destination Pin at (540, 110) */}
-          <circle cx="540" cy="110" r="10" fill="#10b981" opacity="0.3" className="animate-ping" />
-          <circle cx="540" cy="110" r="6" fill="#10b981" />
-        </svg>
-
-        {/* Labels over the pins */}
-        <div className="absolute top-[35%] left-2 transform -translate-y-full text-[11px] font-mono text-cyan-400 bg-slate-900/90 px-2 py-0.5 rounded border border-cyan-500/30">
-          ORIGIN: {origin.split(' ')[0]}
-        </div>
-
-        <div className="absolute top-[35%] right-2 transform -translate-y-full text-[11px] font-mono text-emerald-400 bg-slate-900/90 px-2 py-0.5 rounded border border-emerald-500/30">
-          DEST: {destination.split(' ')[0]}
-        </div>
-
-        <div className="absolute top-[48%] left-1/2 transform -translate-x-1/2 -translate-y-full text-[10px] font-mono text-rose-300 bg-rose-950/90 px-2 py-0.5 rounded border border-rose-500">
-          COLLISION BOTTLENECK (Market St)
-        </div>
-      </div>
-
-      {/* Bottom Summary Footer */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800/80 text-xs">
-        <div className="flex items-center gap-2">
-          {isAiSmart ? (
-            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              Dynamic Signal Coordination Active: 94% Green progression along route
-            </span>
-          ) : isShortest ? (
-            <span className="flex items-center gap-1.5 text-rose-400 font-semibold">
-              <AlertTriangle className="w-4 h-4" />
-              Alert: Passes directly through 2-lane collision scene (+25 min delay)
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              Smooth continuous speed profile with minimal stops
-            </span>
-          )}
-        </div>
+        <span className="text-[11px] text-slate-400">
+          Click any polyline on the map to switch alternative route
+        </span>
       </div>
     </div>
   )
 }
-

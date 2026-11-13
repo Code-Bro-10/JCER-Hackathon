@@ -1,120 +1,157 @@
-import React from 'react'
-import { Siren, Shield, Zap, AlertTriangle, Radio } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Zap } from 'lucide-react'
 import { useTraffic } from '../../context/TrafficContext'
+import {
+  TrafficMapContainer,
+  EmergencyCorridorLayer,
+  RoadNetworkDigitalTwinLayer,
+  IncidentLayer,
+} from '../map'
+import {
+  calculateEmergencyCorridor,
+  DEFAULT_MAP_CENTER,
+} from '../../services/roadNetworkData'
 
+/**
+ * Interactive Emergency Map View for Emergency Dashboard
+ *
+ * Powered by React, Leaflet, React-Leaflet, and OpenStreetMap.
+ * Features:
+ * - Real geographic green wave corridor visualization
+ * - Downstream signal preemption (all corridor signals locked GREEN)
+ * - Conflicting cross-street signals locked RED
+ * - Real-time animated strobe siren emergency vehicle
+ * - Vehicle switcher (Ambulance, Fire Engine, Rapid Rescue)
+ * - Live telemetry and ETA comparison
+ */
 export default function EmergencyMapView() {
-  const { emergencyDispatches, liveSimulationTick } = useTraffic()
+  const { emergencyDispatches, liveSimulationTick, intersections, incidents } = useTraffic()
 
-  const activeDispatch = emergencyDispatches[0] || null
+  const [vehicleType, setVehicleType] = useState('ambulance')
+  const [originNodeId, setOriginNodeId] = useState('INT-105') // Riverside Dr Substation
+  const [destinationNodeId, setDestinationNodeId] = useState('INT-104') // Tech Parkway Hospital/Scene
+  const [isPreemptionActive, setIsPreemptionActive] = useState(true)
+
+  // Compute emergency corridor
+  const corridorData = useMemo(() => {
+    return calculateEmergencyCorridor({
+      vehicleType,
+      originNodeId,
+      destinationNodeId,
+    })
+  }, [vehicleType, originNodeId, destinationNodeId])
+
+  const preemptedNodeIds = isPreemptionActive && corridorData ? corridorData.preemptedNodeIds : []
+  const conflictingNodeIds = isPreemptionActive && corridorData ? corridorData.conflictingNodeIds : []
+
+  // Center on corridor
+  const mapCenter = useMemo(() => {
+    if (corridorData?.latLngs && corridorData.latLngs.length > 0) {
+      const midIdx = Math.floor(corridorData.latLngs.length / 2)
+      return corridorData.latLngs[midIdx]
+    }
+    return DEFAULT_MAP_CENTER
+  }, [corridorData])
 
   return (
-    <div className="relative rounded-2xl bg-slate-950 border border-slate-800 p-5 overflow-hidden shadow-2xl flex flex-col justify-between h-[360px] sm:h-[400px]">
-      {/* Background Matrix Grid */}
-      <div
-        className="absolute inset-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, #f43f5e 1px, transparent 1px), linear-gradient(to bottom, #f43f5e 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
+    <div className="relative rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+      <TrafficMapContainer
+        center={mapCenter}
+        zoom={14}
+        title="Emergency Corridor Preemption Visualizer"
+        subtitle={`Target Unit: ${corridorData?.unit?.code || 'MED-12'} | Downstream: 100% Green Priority`}
+        showLayerControls={false}
+        height="440px"
+        headerActions={
+          <div className="flex items-center gap-2">
+            {/* Vehicle Mode Switcher */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setVehicleType('ambulance')}
+                className={`px-2.5 py-1 rounded-lg font-mono transition-all cursor-pointer ${
+                  vehicleType === 'ambulance'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Ambulance
+              </button>
+              <button
+                type="button"
+                onClick={() => setVehicleType('fire_engine')}
+                className={`px-2.5 py-1 rounded-lg font-mono transition-all cursor-pointer ${
+                  vehicleType === 'fire_engine'
+                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Fire Engine
+              </button>
+            </div>
 
-      {/* Top Overlay */}
-      <div className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400">
-            <Radio className="w-4 h-4 animate-pulse" />
+            {/* Preemption Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsPreemptionActive(!isPreemptionActive)}
+              className={`px-3 py-1 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                isPreemptionActive
+                  ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/30'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>{isPreemptionActive ? 'SIGNALS LOCKED' : 'STANDBY'}</span>
+            </button>
           </div>
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Emergency Corridor Preemption Visualizer
-            </h4>
-            <p className="text-[10px] text-slate-400">
-              Active Target: <span className="text-rose-400 font-mono font-bold">{activeDispatch?.unitCode || 'STANDBY'}</span>
-            </p>
+        }
+      >
+        {/* Road Network Digital Twin with locked green and conflicting red signals */}
+        <RoadNetworkDigitalTwinLayer
+          intersections={intersections}
+          preemptedNodeIds={preemptedNodeIds}
+          conflictingNodeIds={conflictingNodeIds}
+          liveTick={liveSimulationTick}
+          showSignals={true}
+          showEdges={true}
+        />
+
+        {/* Incident Layer */}
+        <IncidentLayer incidents={incidents} />
+
+        {/* Emergency Green Wave Corridor with Moving Strobe Siren Vehicle */}
+        <EmergencyCorridorLayer
+          corridorData={corridorData}
+          isPreemptionActive={isPreemptionActive}
+          liveTick={liveSimulationTick}
+        />
+      </TrafficMapContainer>
+
+      {/* Real-Time Normal vs Emergency ETA Comparison Footer Banner */}
+      {corridorData && corridorData.success && (
+        <div className="p-3.5 bg-slate-900/95 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+          <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <span className="text-slate-400 text-[10px]">Normal Civilian ETA:</span>
+            <span className="text-sm font-bold text-slate-300 font-mono">
+              {corridorData.normalEtaMinutes} min
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-950 p-2.5 rounded-xl border border-emerald-500/30">
+            <span className="text-emerald-400 text-[10px] font-bold">Emergency Preempted ETA:</span>
+            <span className="text-sm font-bold text-emerald-400 font-mono">
+              {corridorData.emergencyEtaMinutes} min
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-950 p-2.5 rounded-xl border border-cyan-500/30">
+            <span className="text-cyan-400 text-[10px] font-bold">Critical Time Gain:</span>
+            <span className="text-sm font-bold text-cyan-300 font-mono">
+              -{corridorData.timeSavedMinutes}m ({corridorData.pctSaved}% faster)
+            </span>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-1 rounded border border-emerald-500/30">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            DOWNSTREAM SIGNALS LOCKED: GREEN
-          </span>
-        </div>
-      </div>
-
-      {/* Visual Corridor Vector */}
-      <div className="relative z-10 my-auto w-full h-44">
-        <svg className="w-full h-full" viewBox="0 0 640 180" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="corridorGreenWave" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#34d399" />
-            </linearGradient>
-            <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
-
-          {/* Cross streets (Blocked by RED) */}
-          <line x1="160" y1="20" x2="160" y2="160" stroke="#7f1d1d" strokeWidth="10" strokeDasharray="4 4" />
-          <line x1="320" y1="20" x2="320" y2="160" stroke="#7f1d1d" strokeWidth="10" strokeDasharray="4 4" />
-          <line x1="480" y1="20" x2="480" y2="160" stroke="#7f1d1d" strokeWidth="10" strokeDasharray="4 4" />
-
-          {/* Main Emergency Corridor (100% Green Priority) */}
-          <line x1="40" y1="90" x2="600" y2="90" stroke="#1e293b" strokeWidth="24" strokeLinecap="round" />
-          <line
-            x1="40"
-            y1="90"
-            x2="600"
-            y2="90"
-            stroke="url(#corridorGreenWave)"
-            strokeWidth="8"
-            strokeLinecap="round"
-            filter="url(#glowGreen)"
-          />
-
-          {/* Intersections Signal Lights */}
-          {[160, 320, 480].map((x, i) => (
-            <g key={i}>
-              {/* Green for main road */}
-              <circle cx={x} cy="90" r="10" fill="#10b981" filter="url(#glowGreen)" />
-              <circle cx={x} cy="90" r="5" fill="#ffffff" />
-              {/* Red for cross streets */}
-              <circle cx={x} cy="50" r="5" fill="#ef4444" />
-              <circle cx={x} cy="130" r="5" fill="#ef4444" />
-            </g>
-          ))}
-
-          {/* Moving Ambulance with Flashing Siren */}
-          <g transform={`translate(${80 + ((liveSimulationTick * 32) % 480)}, 90)`}>
-            <circle cx="0" cy="0" r="16" fill="#f43f5e" opacity="0.4" className="animate-ping" />
-            <rect x="-18" y="-10" width="36" height="20" rx="4" fill="#ffffff" stroke="#ef4444" strokeWidth="2" />
-            <circle cx="0" cy="-6" r="4" fill="#ef4444" className="animate-pulse" />
-          </g>
-        </svg>
-
-        {/* Labels over the corridor */}
-        <div className="absolute top-2 left-6 text-[10px] font-mono text-cyan-400 bg-slate-900/90 px-2 py-0.5 rounded border border-cyan-500/30">
-          DISPATCH ORIGIN (STATION #4)
-        </div>
-        <div className="absolute top-2 right-6 text-[10px] font-mono text-emerald-400 bg-slate-900/90 px-2 py-0.5 rounded border border-emerald-500/30">
-          TRAUMA CENTER BAY
-        </div>
-      </div>
-
-      {/* Bottom Status strip */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800/80 text-xs">
-        <div className="flex items-center gap-2 text-rose-300 font-mono">
-          <Siren className="w-4 h-4 text-rose-400" />
-          <span>AUDIO & VISUAL SIREN BEACON BROADCASTING</span>
-        </div>
-        <span className="font-mono text-emerald-400 font-bold">
-          ESTIMATED TIME SAVED: ~7.5 CRITICAL MINUTES
-        </span>
-      </div>
+      )}
     </div>
   )
 }
-
