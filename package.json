@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test algorithms/tests/*.test.js",
+    "test:algorithms": "node --test algorithms/tests/*.test.js",
+    "benchmark:algorithms": "node algorithms/tests/runAll.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
