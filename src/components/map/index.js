@@ -22,4 +22,5 @@ export { default as RoadClosureSimulator } from './RoadClosureSimulator'
 export { default as EmergencyCorridorLayer } from './EmergencyCorridorLayer'
 export { default as EmergencyControlPanel } from './EmergencyControlPanel'
 export { default as EmergencyRoutingSimulator } from './EmergencyRoutingSimulator'
+export { default as CameraLayer } from './CameraLayer'
 

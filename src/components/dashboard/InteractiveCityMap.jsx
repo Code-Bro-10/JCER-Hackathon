@@ -87,11 +87,12 @@ export default function InteractiveCityMap() {
 
   // Camera node mappings on real coordinates
   const cameraNodes = useMemo(() => [
+    { camId: 'CAM-BGM-01', nodeId: 'BGM-101', name: 'Rani Chennamma Circle Pan-Tilt CCTV' },
+    { camId: 'CAM-BGM-02', nodeId: 'BGM-106', name: 'JCER Campus Gate / Machhe CCTV' },
+    { camId: 'CAM-BGM-03', nodeId: 'BGM-104', name: 'Bogarves Junction Traffic Cam' },
+    { camId: 'CAM-BGM-04', nodeId: 'BGM-105', name: 'RPD College Cross Tilakwadi Cam' },
     { camId: 'CAM-DOWNTOWN-01', nodeId: 'INT-101', name: 'Grand Central & 5th St' },
     { camId: 'CAM-PORT-03', nodeId: 'INT-102', name: 'Port Blvd & Marina Bridge' },
-    { camId: 'CAM-CENTRAL-02', nodeId: 'INT-103', name: 'Financial Way & Metro Square' },
-    { camId: 'CAM-TECH-01', nodeId: 'INT-104', name: 'Tech Parkway & Innovation Blvd' },
-    { camId: 'CAM-RIVERSIDE-01', nodeId: 'INT-105', name: 'Riverside Dr & 12th Avenue' },
   ], [])
 
   const handleToggleLayer = (layerKey) => {
@@ -174,7 +175,7 @@ export default function InteractiveCityMap() {
               title="Toggle CCTV Vision Feeds"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>CCTV (5)</span>
+              <span>CCTV ({cameraNodes.length})</span>
             </button>
 
             {/* Accident / Closure Simulator Drawer Toggle */}

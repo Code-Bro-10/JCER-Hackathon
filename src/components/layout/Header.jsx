@@ -12,8 +12,14 @@ import {
   X,
   Sparkles,
   ShieldAlert,
+  Users,
+  Shield,
+  User,
+  LogOut,
+  KeyRound,
 } from 'lucide-react'
 import { useTraffic } from '../../context/TrafficContext'
+import { useAuth, DEMO_PERSONAS } from '../../context/AuthContext'
 import { SECTORS } from '../../utils/constants'
 import Badge from '../common/Badge'
 
@@ -29,9 +35,12 @@ export default function Header({ onMobileMenuToggle }) {
     setCurrentPage,
   } = useTraffic()
 
+  const { user, isAuthenticated, logout, quickLogin, activePeers } = useAuth()
+
   const [timeString, setTimeString] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showSectorDropdown, setShowSectorDropdown] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Unread notifications
@@ -158,6 +167,17 @@ export default function Header({ onMobileMenuToggle }) {
           )}
         </div>
 
+        {/* Live Multi-User Concurrency Badge */}
+        <div
+          onClick={() => setCurrentPage('login')}
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 hover:border-slate-700 cursor-pointer transition-all"
+          title="Simultaneous Multi-User Mesh (Click to view session auth)"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <Users className="w-3.5 h-3.5 text-emerald-400" />
+          <span>{activePeers.length + 1} User{activePeers.length + 1 > 1 ? 's' : ''} Online</span>
+        </div>
+
         {/* Live Clock */}
         <div className="hidden xl:flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs font-mono text-cyan-400">
           <Activity className="w-3.5 h-3.5 text-cyan-400" />
@@ -238,6 +258,120 @@ export default function Header({ onMobileMenuToggle }) {
                 ))}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* User Account / Admin Login Status Dropdown */}
+        <div className="relative">
+          {user ? (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800/90 text-left transition-all cursor-pointer"
+              >
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-xs flex-shrink-0">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="hidden sm:block leading-tight">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="truncate max-w-[110px]">{user.name.split(' ')[0]}</span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold uppercase ${
+                        user.role === 'admin'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          : user.role === 'operator'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]">
+                    {user.badgeNumber || user.department || 'Active'}
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+              </button>
+
+              {/* User Account Dropdown Menu */}
+              {showUserDropdown && (
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-slate-800 bg-slate-900/95 backdrop-blur-2xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95">
+                  <div className="pb-2.5 border-b border-slate-800">
+                    <div className="text-xs font-bold text-white">{user.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">{user.email}</div>
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold uppercase">
+                        {user.role.toUpperCase()}
+                      </span>
+                      <span className="text-slate-400">{user.department}</span>
+                    </div>
+                  </div>
+
+                  {/* Switch Persona Options for Quick Testing */}
+                  <div className="py-2.5 border-b border-slate-800 space-y-1">
+                    <div className="text-[10px] uppercase font-mono font-bold text-slate-400 px-1 pb-1">
+                      Quick Role Switch (Multi-User)
+                    </div>
+                    {Object.values(DEMO_PERSONAS).map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => {
+                          quickLogin(p.key)
+                          setShowUserDropdown(false)
+                        }}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                          user.email === p.email
+                            ? 'bg-blue-600/20 text-blue-300 font-bold'
+                            : 'hover:bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <span>{p.name.split(' ')[0]} ({p.role.toUpperCase()})</span>
+                        {user.email === p.email && <CheckCircle className="w-3.5 h-3.5 text-blue-400" />}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false)
+                        setCurrentPage('login')
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-2 cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Switch / Register New Account</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false)
+                        logout()
+                        setCurrentPage('login')
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCurrentPage('login')}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
           )}
         </div>
       </div>

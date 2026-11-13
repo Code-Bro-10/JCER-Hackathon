@@ -10,6 +10,8 @@ import {
 import {
   calculateEmergencyCorridor,
   DEFAULT_MAP_CENTER,
+  BELAGAVI_NODES,
+  BENGALURU_NODES,
 } from '../../services/roadNetworkData'
 
 /**
@@ -28,8 +30,8 @@ export default function EmergencyMapView() {
   const { emergencyDispatches, liveSimulationTick, intersections, incidents } = useTraffic()
 
   const [vehicleType, setVehicleType] = useState('ambulance')
-  const [originNodeId, setOriginNodeId] = useState('INT-105') // Riverside Dr Substation
-  const [destinationNodeId, setDestinationNodeId] = useState('INT-104') // Tech Parkway Hospital/Scene
+  const [originNodeId, setOriginNodeId] = useState('BGM-101') // Rani Chennamma Circle
+  const [destinationNodeId, setDestinationNodeId] = useState('BGM-106') // JCER Campus Corridor
   const [isPreemptionActive, setIsPreemptionActive] = useState(true)
 
   // Compute emergency corridor

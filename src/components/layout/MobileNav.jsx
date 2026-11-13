@@ -1,5 +1,18 @@
 import React from 'react'
-import { LayoutDashboard, BrainCircuit, AlertTriangle, Siren, Route, BarChart3 } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Globe,
+  Route,
+  BrainCircuit,
+  AlertTriangle,
+  TrendingUp,
+  Zap,
+  Siren,
+  Layers,
+  BarChart3,
+  Shield,
+  Camera,
+} from 'lucide-react'
 import { useTraffic } from '../../context/TrafficContext'
 
 export default function MobileNav() {
@@ -10,15 +23,20 @@ export default function MobileNav() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'live-map', label: 'Map', icon: Globe },
+    { id: 'route', label: 'Route', icon: Route },
     { id: 'prediction', label: 'Predict', icon: BrainCircuit },
     { id: 'incidents', label: 'Incidents', icon: AlertTriangle, badge: activeIncidents },
-    { id: 'route', label: 'Routes', icon: Route },
-    { id: 'emergency', label: 'Emergency', icon: Siren, alert: activeEmergencies > 0 },
-    { id: 'analytics', label: 'Stats', icon: BarChart3 },
+    { id: 'network-impact', label: 'Impact', icon: TrendingUp },
+    { id: 'signal-optimization', label: 'Signals', icon: Zap },
+    { id: 'emergency', label: 'Siren', icon: Siren, alert: activeEmergencies > 0 },
+    { id: 'digital-twin', label: 'Twin', icon: Layers },
+    { id: 'camera-intelligence', label: 'Vision', icon: Camera },
+    { id: 'admin', label: 'Admin', icon: Shield },
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-xl px-2 py-1.5 flex items-center justify-around shadow-2xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-slate-800 bg-[#111827] px-1 py-1 flex items-center justify-around shadow-2xl overflow-x-auto">
       {tabs.map((tab) => {
         const Icon = tab.icon
         const isActive = currentPage === tab.id
@@ -28,14 +46,14 @@ export default function MobileNav() {
             key={tab.id}
             type="button"
             onClick={() => setCurrentPage(tab.id)}
-            className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
-              isActive ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            className={`relative flex flex-col items-center justify-center py-1 px-1.5 rounded-lg text-[9px] font-medium transition-all cursor-pointer flex-shrink-0 ${
+              isActive ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <div className="relative">
-              <Icon className={`w-5 h-5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
               {tab.badge > 0 && (
-                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                <span className="absolute -top-1 -right-2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white">
                   {tab.badge}
                 </span>
               )}
@@ -46,11 +64,10 @@ export default function MobileNav() {
                 </span>
               )}
             </div>
-            <span className="mt-1">{tab.label}</span>
+            <span className="mt-0.5 whitespace-nowrap">{tab.label}</span>
           </button>
         )
       })}
     </nav>
   )
 }
-

@@ -102,9 +102,8 @@ export default function RoutePolylinesLayer({
               positions={latLngs}
               pathOptions={{
                 color: polyColor,
-                weight: isSelected ? 6 : 3.5,
-                opacity: isSelected ? 1.0 : 0.45,
-                dashArray: isSelected ? undefined : '8, 6',
+                weight: isSelected ? 8 : 5.5,
+                opacity: isSelected ? 1.0 : 0.85,
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
@@ -136,6 +135,29 @@ export default function RoutePolylinesLayer({
                 </div>
               </Tooltip>
             </Polyline>
+
+            {/* Midpoint Interactive Duration Pill on the Map */}
+            {latLngs.length > 2 && (
+              <Marker
+                position={latLngs[Math.floor(latLngs.length / 2)]}
+                icon={L.divIcon({
+                  className: 'route-duration-pill',
+                  html: `
+                    <div class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-xl border border-white/60 cursor-pointer flex items-center gap-1 transition-transform hover:scale-110 ${
+                      isSelected ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-950 scale-105' : 'opacity-90'
+                    }" style="background-color: ${polyColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.8);">
+                      <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      <span>${route.durationMin}m</span>
+                    </div>
+                  `,
+                  iconSize: [64, 24],
+                  iconAnchor: [32, 12],
+                })}
+                eventHandlers={{
+                  click: () => onSelectRoute(route.id),
+                }}
+              />
+            )}
 
             {/* Turn Waypoint Dots for Selected Route */}
             {isSelected &&

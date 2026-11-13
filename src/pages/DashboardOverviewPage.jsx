@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Compass,
   ArrowUpRight,
+  Radio,
 } from 'lucide-react'
 import { useTraffic } from '../context/TrafficContext'
 import StatCard from '../components/common/StatCard'
@@ -17,6 +18,7 @@ import InteractiveCityMap from '../components/dashboard/InteractiveCityMap'
 import AdaptiveSignalControl from '../components/dashboard/AdaptiveSignalControl'
 import RecentIncidentsWidget from '../components/dashboard/RecentIncidentsWidget'
 import SectorCongestionChart from '../components/dashboard/SectorCongestionChart'
+import MLIntelligenceWidget from '../components/dashboard/MLIntelligenceWidget'
 import Button from '../components/common/Button'
 import { CCTV_FEEDS } from '../services/mockData'
 
@@ -126,6 +128,9 @@ export default function DashboardOverviewPage() {
         />
       </div>
 
+      {/* Machine Learning Telemetry & Inference Widget */}
+      <MLIntelligenceWidget />
+
       {/* Main Interactive Digital Twin Map (Full Width) */}
       <InteractiveCityMap />
 
@@ -142,7 +147,7 @@ export default function DashboardOverviewPage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {CCTV_FEEDS.map((feed) => (
+          {CCTV_FEEDS.slice(0, 6).map((feed) => (
             <button
               key={feed.id}
               type="button"
@@ -150,25 +155,46 @@ export default function DashboardOverviewPage() {
               className="group relative rounded-xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 p-2 text-left transition-all hover:scale-[1.02] cursor-pointer"
             >
               <div className="aspect-video w-full rounded-lg bg-slate-900 overflow-hidden relative flex items-center justify-center">
-                <div
-                  className="absolute inset-0 opacity-20 pointer-events-none"
-                  style={{
-                    backgroundImage: 'linear-gradient(to right, #06b6d4 1px, transparent 1px)',
-                    backgroundSize: '12px 12px',
-                  }}
-                />
-                <Camera className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 transition-colors" />
-                <span className="absolute top-1 left-1 flex items-center gap-1 text-[9px] font-mono font-bold text-rose-400 bg-black/60 px-1 rounded">
+                {feed.isLocalWebcam ? (
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-950/50 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-2 text-center">
+                    <Radio className="w-5 h-5 text-rose-400 animate-pulse" />
+                    <span className="text-[9px] font-mono font-bold text-rose-300 mt-1">DEVICE WEBCAM</span>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-slate-950 flex flex-col justify-around py-1 overflow-hidden">
+                    {/* Animated road lanes with moving traffic streaks */}
+                    <div className="w-full h-[1px] bg-yellow-500/30" />
+                    <div className="w-full h-[1px] bg-slate-700/40 border-b border-dashed border-slate-600/50" />
+                    <div className="w-full h-[1px] bg-yellow-500/30" />
+                    {/* Dynamic vehicle streaks */}
+                    <div
+                      className="absolute top-[24%] w-5 h-2 bg-cyan-400 rounded-sm shadow-sm shadow-cyan-400 animate-pulse"
+                      style={{ left: `${(feed.id.charCodeAt(feed.id.length - 1) * 13) % 60 + 15}%` }}
+                    />
+                    <div
+                      className="absolute top-[58%] w-6 h-2 bg-emerald-400 rounded-sm shadow-sm shadow-emerald-400"
+                      style={{ left: `${(feed.id.charCodeAt(feed.id.length - 2 || 0) * 19) % 55 + 20}%` }}
+                    />
+                    <div
+                      className="absolute top-[40%] w-4 h-1.5 bg-amber-400 rounded-sm"
+                      style={{ left: `${(feed.id.charCodeAt(0) * 9) % 50 + 25}%` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/40" />
+                  </div>
+                )}
+
+                {/* HUD overlays */}
+                <span className="absolute top-1 left-1 flex items-center gap-1 text-[8px] font-mono font-bold text-rose-400 bg-black/80 px-1.5 py-0.5 rounded border border-rose-900/50">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  REC
+                  LIVE
                 </span>
-                <span className="absolute bottom-1 right-1 text-[9px] font-mono text-cyan-400 bg-black/60 px-1 rounded">
-                  {feed.resolution.split(' ')[0]}
+                <span className="absolute bottom-1 right-1 text-[8px] font-mono text-cyan-300 bg-black/80 px-1 py-0.5 rounded border border-cyan-900/50">
+                  {feed.fps || 30} FPS
                 </span>
               </div>
               <div className="mt-2 min-w-0">
                 <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-cyan-300">
-                  {feed.name.split('-')[0]}
+                  {feed.name.split(' - ')[0]}
                 </div>
                 <div className="text-[10px] text-slate-500 truncate">{feed.sector}</div>
               </div>

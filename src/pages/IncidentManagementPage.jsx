@@ -6,6 +6,10 @@ import {
   CheckCircle2,
   Clock,
   RefreshCw,
+  MapPin,
+  Layers,
+  ThumbsUp,
+  ShieldCheck,
 } from 'lucide-react'
 import { useTraffic } from '../context/TrafficContext'
 import { TrafficService } from '../services/api'
@@ -15,6 +19,8 @@ import ReportIncidentModal from '../components/incidents/ReportIncidentModal'
 import IncidentDetailModal from '../components/incidents/IncidentDetailModal'
 import StatCard from '../components/common/StatCard'
 import Button from '../components/common/Button'
+import { TrafficMapContainer, IncidentLayer } from '../components/map'
+import { DEFAULT_MAP_CENTER } from '../services/roadNetworkData'
 
 export default function IncidentManagementPage() {
   const { incidents, setIncidents, addToast, refreshData } = useTraffic()
@@ -23,6 +29,7 @@ export default function IncidentManagementPage() {
   const [sector, setSector] = useState('All Sectors')
   const [severity, setSeverity] = useState('ALL')
   const [status, setStatus] = useState('ALL')
+  const [showIncidentMap, setShowIncidentMap] = useState(false)
 
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [selectedIncident, setSelectedIncident] = useState(null)
@@ -35,9 +42,9 @@ export default function IncidentManagementPage() {
       if (status !== 'ALL' && inc.status !== status) return false
       if (search.trim()) {
         const q = search.toLowerCase()
-        const matchesTitle = inc.title.toLowerCase().includes(q)
-        const matchesLoc = inc.location.toLowerCase().includes(q)
-        const matchesId = inc.id.toLowerCase().includes(q)
+        const matchesTitle = inc.title?.toLowerCase().includes(q)
+        const matchesLoc = inc.location?.toLowerCase().includes(q)
+        const matchesId = inc.id?.toLowerCase().includes(q)
         if (!matchesTitle && !matchesLoc && !matchesId) return false
       }
       return true
@@ -48,6 +55,7 @@ export default function IncidentManagementPage() {
   const totalCount = incidents.length
   const activeCount = incidents.filter((i) => i.status !== 'Resolved').length
   const resolvedCount = incidents.filter((i) => i.status === 'Resolved').length
+  const verifiedCount = incidents.filter((i) => i.status === 'Verified' || i.status === 'Dispatched').length
   const criticalCount = incidents.filter((i) => i.severity === 'CRITICAL' && i.status !== 'Resolved').length
 
   const handleStatusChange = async (incidentId, newStatus) => {
@@ -71,6 +79,23 @@ export default function IncidentManagementPage() {
     } catch (err) {
       addToast({ type: 'danger', title: 'Update Failed', message: err.message })
     }
+  }
+
+  const handleConfirmIncident = (incidentId) => {
+    setIncidents((prev) =>
+      prev.map((i) =>
+        i.id === incidentId ? { ...i, confirmations: (i.confirmations || 1) + 1 } : i
+      )
+    )
+    addToast({
+      type: 'success',
+      title: 'Community Confirmation Registered',
+      message: `You confirmed ${incidentId}. Confidence score elevated.`,
+    })
+  }
+
+  const handleVerifyIncident = (incidentId) => {
+    handleStatusChange(incidentId, 'Verified')
   }
 
   const handleAddUnit = async (incidentId, unitCode) => {
@@ -102,28 +127,38 @@ export default function IncidentManagementPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-            Active Incident Command & Dispatch
-            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30">
-              {activeCount} PENDING
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+            Active Incident Command & Field Dispatch
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30">
+              {activeCount} ACTIVE HAZARDS
             </span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Real-time incident detection, emergency responder routing, dynamic sign warning, and lane clearance.
+          <p className="text-xs text-slate-400 mt-1">
+            Real-time incident reporting with duplicate detection, GPS location intake, admin verification, and community confirmations.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={MapPin}
+            onClick={() => setShowIncidentMap(!showIncidentMap)}
+          >
+            {showIncidentMap ? 'Hide Incident Map' : 'Show Geographic Map'}
+          </Button>
+
           <Button
             variant="secondary"
             size="sm"
             icon={RefreshCw}
             onClick={refreshData}
           >
-            Sync
+            Sync Telemetry
           </Button>
+
           <Button
             variant="danger"
             size="sm"
@@ -149,14 +184,14 @@ export default function IncidentManagementPage() {
         />
 
         <StatCard
-          title="Critical Emergencies"
-          value={criticalCount}
-          unit="code red"
-          change={0}
-          trend="neutral"
-          color="amber"
-          icon={ShieldAlert}
-          changeLabel="multi-agency response"
+          title="Verified Legitimacy"
+          value={verifiedCount}
+          unit={`of ${totalCount}`}
+          change={100}
+          trend="up"
+          color="blue"
+          icon={ShieldCheck}
+          changeLabel="admin confirmed"
         />
 
         <StatCard
@@ -171,7 +206,7 @@ export default function IncidentManagementPage() {
         />
 
         <StatCard
-          title="Average Clearance Time"
+          title="Avg. Clearance Time"
           value="18.4"
           unit="mins"
           change={-4.2}
@@ -181,6 +216,26 @@ export default function IncidentManagementPage() {
           changeLabel="faster response times"
         />
       </div>
+
+      {/* Optional Geographic Incident Map Preview */}
+      {showIncidentMap && (
+        <div className="rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+          <TrafficMapContainer
+            center={DEFAULT_MAP_CENTER}
+            zoom={13}
+            title="Incident Geospatial Distribution"
+            subtitle={`${filteredIncidents.length} Filtered Incidents plotted across Belagavi / Local Area`}
+            showLayerControls={false}
+            height="380px"
+          >
+            <IncidentLayer
+              incidents={filteredIncidents}
+              activeSector={sector}
+              onSimulateImpact={(inc) => setSelectedIncident(inc)}
+            />
+          </TrafficMapContainer>
+        </div>
+      )}
 
       {/* Filter toolbar */}
       <IncidentFilters
@@ -226,6 +281,8 @@ export default function IncidentManagementPage() {
               onSelect={(inc) => setSelectedIncident(inc)}
               onQuickResolve={(id) => handleStatusChange(id, 'Resolved')}
               onQuickDispatch={(id) => handleStatusChange(id, 'Dispatched')}
+              onConfirm={handleConfirmIncident}
+              onVerify={handleVerifyIncident}
             />
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { TrafficService } from '../services/api'
 import { sounds } from '../services/soundEffects'
+import { getSocket } from '../services/socketClient'
 
 const TrafficContext = createContext(null)
 
@@ -73,6 +74,87 @@ export function TrafficProvider({ children }) {
   useEffect(() => {
     loadGlobalData()
   }, [loadGlobalData])
+
+  // Real-time Multi-User Socket.IO Synchronization Bus
+  useEffect(() => {
+    const socket = getSocket()
+
+    const onIncidentCreated = (newIncident) => {
+      setIncidents((prev) => {
+        if (prev.some((i) => i.id === newIncident.id)) return prev
+        return [newIncident, ...prev]
+      })
+      addToast({
+        type: 'warning',
+        title: '📡 Simultaneous Network Broadcast',
+        message: `New incident reported: ${newIncident.title} (${newIncident.id})`,
+      })
+    }
+
+    const onIncidentUpdated = (updatedIncident) => {
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === updatedIncident.id ? updatedIncident : i))
+      )
+      addToast({
+        type: 'info',
+        title: '📡 Remote Operator Update',
+        message: `${updatedIncident.id} status changed to ${updatedIncident.status}`,
+      })
+    }
+
+    const onIncidentDeleted = ({ id }) => {
+      setIncidents((prev) => prev.filter((i) => i.id !== id))
+    }
+
+    const onGreenWaveActivated = (dispatch) => {
+      setEmergencyDispatches((prev) => {
+        if (prev.some((d) => d.id === dispatch.id)) return prev
+        return [dispatch, ...prev]
+      })
+      sounds.playEmergencySiren()
+      addToast({
+        type: 'critical',
+        title: '🚨 EMERGENCY GREEN WAVE SYNCHRONIZED',
+        message: `Corridor preempted by dispatch commander for Unit: ${dispatch.unitCode}`,
+      })
+    }
+
+    const onGreenWaveCancelled = ({ dispatchId }) => {
+      setEmergencyDispatches((prev) => prev.filter((d) => d.id !== dispatchId))
+    }
+
+    const onSignalUpdated = (updatedNode) => {
+      setIntersections((prev) =>
+        prev.map((node) => (node.id === updatedNode.id ? updatedNode : node))
+      )
+    }
+
+    const onCameraAlert = (alertData) => {
+      addToast({
+        type: 'critical',
+        title: '📸 AI Computer Vision Detection',
+        message: `${alertData.category || 'Road Obstruction'} detected at ${alertData.cameraName || 'CCTV Node'}`,
+      })
+    }
+
+    socket.on('incident:created', onIncidentCreated)
+    socket.on('incident:updated', onIncidentUpdated)
+    socket.on('incident:deleted', onIncidentDeleted)
+    socket.on('emergency:greenwave_activated', onGreenWaveActivated)
+    socket.on('emergency:greenwave_cancelled', onGreenWaveCancelled)
+    socket.on('signal:updated', onSignalUpdated)
+    socket.on('camera:alert', onCameraAlert)
+
+    return () => {
+      socket.off('incident:created', onIncidentCreated)
+      socket.off('incident:updated', onIncidentUpdated)
+      socket.off('incident:deleted', onIncidentDeleted)
+      socket.off('emergency:greenwave_activated', onGreenWaveActivated)
+      socket.off('emergency:greenwave_cancelled', onGreenWaveCancelled)
+      socket.off('signal:updated', onSignalUpdated)
+      socket.off('camera:alert', onCameraAlert)
+    }
+  }, [addToast])
 
   // Live timer for intersection phase countdowns & vehicle movements
   useEffect(() => {

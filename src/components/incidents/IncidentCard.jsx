@@ -10,6 +10,8 @@ import {
   AlertOctagon,
   Truck,
   Users,
+  ThumbsUp,
+  Image,
 } from 'lucide-react'
 import Badge from '../common/Badge'
 import Button from '../common/Button'
@@ -21,10 +23,13 @@ export default function IncidentCard({
   onSelect,
   onQuickResolve,
   onQuickDispatch,
+  onConfirm = null,
+  onVerify = null,
 }) {
   const { setActiveCameraModal } = useTraffic()
 
   const isResolved = incident.status === 'Resolved'
+  const isVerified = incident.status === 'Verified' || incident.status === 'Dispatched'
 
   return (
     <div
@@ -55,9 +60,9 @@ export default function IncidentCard({
               className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${
                 isResolved
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : incident.status === 'Dispatched'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'bg-slate-800 text-slate-300 border border-slate-700'
+                  : isVerified
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
               }`}
             >
               {incident.status}
@@ -67,8 +72,15 @@ export default function IncidentCard({
 
         {/* Title & Classification */}
         <div className="mt-3">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-semibold">
-            {incident.typeName}
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-blue-400 font-semibold">
+              {incident.typeName}
+            </span>
+            {incident.photoUrl && (
+              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                <Image className="w-3 h-3" /> Photo Attached
+              </span>
+            )}
           </div>
           <h3 className="text-base font-bold text-white mt-0.5 leading-snug">
             {incident.title}
@@ -91,16 +103,18 @@ export default function IncidentCard({
           <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
             <div className="text-[10px] text-slate-500">BLOCKED</div>
             <div className="font-bold text-rose-400 mt-0.5">
-              {incident.lanesBlocked}/{incident.totalLanes} lanes
+              {incident.lanesBlocked || 1}/{incident.totalLanes || 3} lanes
             </div>
           </div>
           <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
             <div className="text-[10px] text-slate-500">EST. DELAY</div>
-            <div className="font-bold text-amber-400 mt-0.5">+{incident.estimatedDelay}</div>
+            <div className="font-bold text-amber-400 mt-0.5">+{incident.estimatedDelay || '15 mins'}</div>
           </div>
           <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
-            <div className="text-[10px] text-slate-500">ZONE RADIUS</div>
-            <div className="font-bold text-slate-300 mt-0.5">{incident.impactRadius}</div>
+            <div className="text-[10px] text-slate-500">CONFIRMS</div>
+            <div className="font-bold text-emerald-400 mt-0.5">
+              {incident.confirmations || 1} Community
+            </div>
           </div>
         </div>
 
@@ -111,7 +125,7 @@ export default function IncidentCard({
             incident.assignedUnits.map((u) => (
               <span
                 key={u}
-                className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-cyan-950/60 text-cyan-300 border border-cyan-500/30"
+                className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-blue-950/60 text-blue-300 border border-blue-500/30"
               >
                 {u}
               </span>
@@ -123,21 +137,45 @@ export default function IncidentCard({
       </div>
 
       {/* Card Action Buttons */}
-      <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={Camera}
-          onClick={() => setActiveCameraModal(incident.cameraFeedId || 'CAM-DOWNTOWN-01')}
-          className="text-xs text-slate-400 hover:text-white"
-        >
-          CCTV
-        </Button>
+      <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Camera}
+            onClick={() => setActiveCameraModal(incident.cameraFeedId || 'CAM-BLR-01')}
+            className="text-xs text-slate-400 hover:text-white"
+          >
+            CCTV
+          </Button>
+
+          {onConfirm && (
+            <button
+              type="button"
+              onClick={() => onConfirm(incident.id)}
+              className="px-2 py-1 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 text-[11px] font-mono text-emerald-400 flex items-center gap-1 cursor-pointer transition-colors"
+              title="Confirm / Upvote Incident Occurrence"
+            >
+              <ThumbsUp className="w-3 h-3" />
+              <span>Confirm</span>
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           {!isResolved && (
             <>
-              {incident.status === 'Reported' && (
+              {incident.status === 'Reported' && onVerify && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onVerify(incident.id)}
+                  className="text-xs"
+                >
+                  Verify
+                </Button>
+              )}
+              {incident.status === 'Reported' && !onVerify && (
                 <Button
                   variant="warning"
                   size="sm"
@@ -171,4 +209,3 @@ export default function IncidentCard({
     </div>
   )
 }
-

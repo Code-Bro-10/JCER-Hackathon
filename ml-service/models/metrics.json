@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-11-13T19:01:19.591893",
+  "training_duration_seconds": 10.81,
+  "dataset_metadata": {
+    "name": "METR-LA Highway Traffic Speed Benchmark (Los Angeles County)",
+    "source": "Caltrans Performance Measurement System (PeMS) / DCRNN / T-GCN",
+    "total_sensors": 207,
+    "timesteps": 2016,
+    "sampling_interval_minutes": 5,
+    "total_speed_observations": 417312,
+    "incident_data_provenance": "Synthetic TIM Dataset [SYNTHETIC-PROTOTYPE-DATASET-V1] (calibrated prototype, non-proprietary)"
+  },
+  "models": {
+    "speed_forecaster_15m": {
+      "model_type": "XGBoost Regressor (n_est=150, max_depth=6)",
+      "test_mae_mph": 3.22,
+      "test_mae_kmh": 5.18,
+      "test_rmse_mph": 5.56,
+      "test_rmse_kmh": 8.95,
+      "test_r2": 0.8241,
+      "test_mape_pct": 8.15,
+      "feature_importances": {
+        "current_speed": 0.3916,
+        "lag_1": 0.2534,
+        "lag_2": 0.006,
+        "lag_3": 0.0052,
+        "rolling_mean_30m": 0.2017,
+        "rolling_std_30m": 0.0062,
+        "rolling_min_30m": 0.0097,
+        "rolling_max_30m": 0.0644,
+        "speed_delta": 0.0139,
+        "accel_delta": 0.0046,
+        "spatial_neighbor_speed": 0.0106,
+        "spatial_discrepancy": 0.0061,
+        "sin_hour": 0.0069,
+        "cos_hour": 0.0094,
+        "day_of_week": 0.0058,
+        "is_weekend": 0.0,
+        "is_peak_hour": 0.0047
+      }
+    },
+    "speed_forecaster_30m": {
+      "model_type": "XGBoost Regressor (n_est=150, max_depth=6)",
+      "test_mae_mph": 3.88,
+      "test_mae_kmh": 6.24,
+      "test_rmse_mph": 6.66,
+      "test_rmse_kmh": 10.72,
+      "test_r2": 0.7473,
+      "test_mape_pct": 10.55
+    },
+    "anomaly_detector": {
+      "model_type": "Isolation Forest (n_est=120, contamination=0.045)",
+      "features": [
+        "current_speed",
+        "speed_delta",
+        "spatial_discrepancy",
+        "rolling_std_30m"
+      ],
+      "training_samples": 138276,
+      "anomalies_detected": 6223,
+      "anomaly_rate_pct": 4.5
+    },
+    "incident_severity_classifier": {
+      "model_type": "Random Forest Classifier (n_est=100, max_depth=10)",
+      "provenance": "[SYNTHETIC-PROTOTYPE-DATASET-V1] (FHWA TIM Calibrated)",
+      "training_samples": 2560,
+      "test_samples": 640,
+      "test_accuracy_pct": 86.72,
+      "test_macro_f1": 0.871,
+      "classes": [
+        "CRITICAL",
+        "HIGH",
+        "LOW",
+        "MEDIUM"
+      ],
+      "feature_importances": {
+        "road_type_code": 0.0505,
+        "total_lanes": 0.035,
+        "lanes_blocked": 0.201,
+        "blockage_ratio": 0.2106,
+        "injuries_count": 0.1332,
+        "speed_drop_kmh": 0.1025,
+        "is_peak_hour": 0.1189,
+        "is_intersection": 0.0702,
+        "weather_code": 0.0506,
+        "hazardous_materials": 0.0275
+      }
+    }
+  }
+}

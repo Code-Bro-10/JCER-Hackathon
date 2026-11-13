@@ -1,0 +1,341 @@
+{
+  "info": {
+    "name": "TrafficAI Smart City API Collection",
+    "_postman_id": "trafficai-api-v1",
+    "description": "Production API test suite for TrafficAI Command Center: Auth, Incidents, Predictions, Routes, Signals, Emergency Green Wave, and Admin Analytics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api/v1", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. System Health",
+      "item": [
+        {
+          "name": "Health Probe",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Transit Dispatcher\",\n  \"email\": \"dispatcher@trafficai.gov\",\n  \"password\": \"Dispatch123!\",\n  \"role\": \"operator\",\n  \"department\": \"Central Operations\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "  pm.collectionVariables.set(\"authToken\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@trafficai.gov\",\n  \"password\": \"AdminPassword123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. KPIs & Sectors",
+      "item": [
+        {
+          "name": "Get KPIs",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/kpis", "host": ["{{baseUrl}}"], "path": ["traffic", "kpis"] }
+          }
+        },
+        {
+          "name": "Get Sectors",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/sectors", "host": ["{{baseUrl}}"], "path": ["traffic", "sectors"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Incidents CRUD",
+      "item": [
+        {
+          "name": "Get All Incidents",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/incidents?severity=ALL&status=ALL", "host": ["{{baseUrl}}"], "path": ["traffic", "incidents"], "query": [{ "key": "severity", "value": "ALL" }, { "key": "status", "value": "ALL" }] }
+          }
+        },
+        {
+          "name": "Create Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Overturned Cargo Van on Central Flyover\",\n  \"type\": \"accident\",\n  \"typeName\": \"Vehicle Collision\",\n  \"severity\": \"CRITICAL\",\n  \"sector\": \"Downtown Grid\",\n  \"location\": \"Downtown Grid, 7th Ave & Market St\",\n  \"coordinates\": { \"x\": 44, \"y\": 36 },\n  \"lanesBlocked\": 2,\n  \"totalLanes\": 4,\n  \"estimatedDelay\": \"20 mins\",\n  \"impactRadius\": \"1.6 km\",\n  \"assignedUnits\": [\"MP-204\", \"RESCUE-05\"],\n  \"description\": \"Cargo van flipped on side across median lane. Heavy traffic backup forming.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/incidents", "host": ["{{baseUrl}}"], "path": ["traffic", "incidents"] }
+          }
+        },
+        {
+          "name": "Get Incident by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/incidents/INC-2026-081", "host": ["{{baseUrl}}"], "path": ["traffic", "incidents", "INC-2026-081"] }
+          }
+        },
+        {
+          "name": "Update Incident Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolving\",\n  \"note\": \"Wreckers righted van; single lane cleared for alternating flow.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/incidents/INC-2026-081/status", "host": ["{{baseUrl}}"], "path": ["traffic", "incidents", "INC-2026-081", "status"] }
+          }
+        },
+        {
+          "name": "Delete Incident",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/traffic/incidents/INC-2026-081", "host": ["{{baseUrl}}"], "path": ["traffic", "incidents", "INC-2026-081"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Prediction & What-If Simulation",
+      "item": [
+        {
+          "name": "Get 24h Predictions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/predictions?horizon=24h", "host": ["{{baseUrl}}"], "path": ["traffic", "predictions"], "query": [{ "key": "horizon", "value": "24h" }] }
+          }
+        },
+        {
+          "name": "Simulate Scenario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weather\": \"storm\",\n  \"event\": \"sports\",\n  \"roadClosure\": true,\n  \"aiInterventionActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/predictions/simulate", "host": ["{{baseUrl}}"], "path": ["traffic", "predictions", "simulate"] }
+          }
+        },
+        {
+          "name": "Get Bottlenecks",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/bottlenecks", "host": ["{{baseUrl}}"], "path": ["traffic", "bottlenecks"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Route Optimization",
+      "item": [
+        {
+          "name": "Plan Multi-Modal Routes",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": \"Grand Central Terminal\",\n  \"destination\": \"Silicon Tech Campus\",\n  \"vehicleType\": \"passenger\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/routes/plan", "host": ["{{baseUrl}}"], "path": ["traffic", "routes", "plan"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Accident Shockwave Simulation",
+      "item": [
+        {
+          "name": "Simulate Accident Shockwave",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sector\": \"Downtown Grid\",\n  \"intersectionId\": \"INT-101\",\n  \"lanesBlocked\": 2,\n  \"totalLanes\": 4,\n  \"initialFlowVph\": 3200,\n  \"durationMinutes\": 45\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/simulate/accident", "host": ["{{baseUrl}}"], "path": ["traffic", "simulate", "accident"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Smart Signal Optimization",
+      "item": [
+        {
+          "name": "Get Intersections",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/intersections", "host": ["{{baseUrl}}"], "path": ["traffic", "intersections"] }
+          }
+        },
+        {
+          "name": "Override Signal Phase",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"North-South Green\",\n  \"durationSeconds\": 45\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/intersections/INT-101/signal-override", "host": ["{{baseUrl}}"], "path": ["traffic", "intersections", "INT-101", "signal-override"] }
+          }
+        },
+        {
+          "name": "Optimize Single Intersection",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/traffic/intersections/INT-101/optimize", "host": ["{{baseUrl}}"], "path": ["traffic", "intersections", "INT-101", "optimize"] }
+          }
+        },
+        {
+          "name": "Optimize Arterial Corridor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sector\": \"Downtown Grid\",\n  \"offsetSeconds\": 12\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/signals/optimize-corridor", "host": ["{{baseUrl}}"], "path": ["traffic", "signals", "optimize-corridor"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Emergency Priority Green Wave",
+      "item": [
+        {
+          "name": "Get Emergency Data",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/emergency", "host": ["{{baseUrl}}"], "path": ["traffic", "emergency"] }
+          }
+        },
+        {
+          "name": "Trigger Green Wave",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCode\": \"MED-12\",\n  \"unitType\": \"ALS Trauma Ambulance\",\n  \"origin\": \"Station 4 West\",\n  \"destination\": \"City Central Trauma Center\",\n  \"corridorName\": \"Priority Green Wave Alpha\",\n  \"priorityLevel\": \"CODE RED\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/emergency/trigger-greenwave", "host": ["{{baseUrl}}"], "path": ["traffic", "emergency", "trigger-greenwave"] }
+          }
+        },
+        {
+          "name": "Cancel Green Wave",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dispatchId\": \"EMERG-901\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/traffic/emergency/cancel-greenwave", "host": ["{{baseUrl}}"], "path": ["traffic", "emergency", "cancel-greenwave"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Admin & Analytics",
+      "item": [
+        {
+          "name": "Get Cameras",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/cameras", "host": ["{{baseUrl}}"], "path": ["traffic", "cameras"] }
+          }
+        },
+        {
+          "name": "Get 7d Analytics",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/traffic/analytics?range=7d", "host": ["{{baseUrl}}"], "path": ["traffic", "analytics"], "query": [{ "key": "range", "value": "7d" }] }
+          }
+        },
+        {
+          "name": "Get Admin Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/audit-logs", "host": ["{{baseUrl}}"], "path": ["admin", "audit-logs"] }
+          }
+        },
+        {
+          "name": "Get Admin Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+
